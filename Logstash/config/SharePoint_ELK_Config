@@ -1,0 +1,100 @@
+################################################################################################
+# File : SharePoint_ELK_Config
+# Author: George Gergues 
+# Date : 15SEP2015
+# Description 	: LogStash configuration file to read from SharePoint ULS log files through the 
+#				file input module.
+# Installation  : Place this file in a config folder within the LogStash Installation.
+#				  If the folder does not exist, create a new folder with the name.
+#				  This file will be reference the custom_patterns folder via relative path.
+# Requirements  : Make sure you are running logstash 1.5.0 or higher.
+################################################################################################
+
+##################### begin input 	##################### 
+input { 
+ #stdin { }
+file {
+  type => "spuls"
+  #In a production system you can use a mapped drive letter, shared path or ship the logs using lumberjack plugin.
+  path => "c:/ELKLogs/In/*.log"
+  start_position => "beginning" 
+    codec => multiline {
+  # merge all lines not starting with the following pattern to the same event message.
+  # If the line does not start with a date, put in new event ,example below.
+  # 09/16/2015
+  charset => "ISO-8859-1"
+  pattern => "^%{DATE} "
+  negate => true
+  what => previous
+  multiline_tag => "multiline"
+  max_lines => 5000
+  max_bytes => 5000000
+  }
+ }
+}
+##################### end input 	#####################
+
+
+##################### begin filter 	#####################
+
+filter{
+	##############  spuls type 			###################
+	if [type] == "spuls"
+	{
+	#ignore log comments
+	if [message] =~ "^#" {
+		drop {} 
+		}
+	grok {
+			#This is the log pattern we are trying to match. 
+			#09/15/2015 17:33:37.10 	w3wp.exe (0x1C24)                       	0x1930	SharePoint Foundation         	Topology                      	e5mc	Medium  	WcfSendRequest: RemoteAddress: 'http://spf0indserv01:32843/879ca7de7d8f4138a7a485c847f8e00a/ProfilePropertyService.svc' Channel: 'Microsoft.Office.Server.UserProfiles.IProfilePropertyService' Action: 'http://Microsoft.Office.Server.UserProfiles/GetProfileProperties' MessageId: 'urn:uuid:6c13e2b7-88f6-46a9-8a5f-f111d473cff0'						
+			patterns_dir => "./custom_patterns"
+			match => ["message", "%{SP_ULS_FMT}"]	
+			tag_on_failure => ["not.spuls"]
+		}
+		
+		date {
+			# Use this field now as your event index time field in Kibana
+			# localization mess...
+			match => ["sptimestamp","MM/dd/YYYY HH:mm:ss.SSS"] 			
+			target => "sptimestamp"
+		}
+	  mutate{
+	  #Clean up the space char issue.		  		  
+		gsub =>["sp_tid","-","_"]
+		gsub =>["sp_area"," ",""]
+		gsub =>["sp_category"," ",""]
+		uppercase => ["severity"]
+		
+		#to be elasticsearch index safe.
+		lowercase => ["type"]
+	  }
+	}
+	############## end spuls type	 ####################
+	
+	
+	############## start iis type	 ####################
+	if [type] == "iis"
+	{
+		#TODO
+		
+	}
+	############## end iis type	 ####################
+}
+##################### end filter 	#####################
+
+
+
+##################### begin output 	#####################
+output {
+ stdout {
+	 codec => rubydebug
+	 }
+	 elasticsearch {
+  hosts => ["127.0.0.1:9200"]
+  ssl   => "false"	
+  # This following pattern will ensure daily index to manage space and trim if needed. 
+  index => ".corp.sp.farmname.uls.%{type}.%{+YYYY.MM.dd}"
+ }
+}
+##################### end output 	#####################
