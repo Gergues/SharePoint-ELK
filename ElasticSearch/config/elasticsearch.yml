@@ -3,7 +3,7 @@
 # Author George Gergues : 
 # Date : 19SEP2015 
 # Description : Single Node cluster , single shard node , with no replicas, this is 
-# 				Development coniguration only. it is faster but not redundant 
+#              Development coniguration only. it is faster but not redundant 
 # ======================== Elasticsearch Configuration =========================
 #
 # NOTE: Elasticsearch comes with reasonable defaults for most settings.
@@ -107,6 +107,6 @@
 # Georege Gergues
 # This will diable network level traffic and sockets.
 
- node.local: true  
+ node.local: true
  index.number_of_shards: 1
  index.number_of_replicas: 0
