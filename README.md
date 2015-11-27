@@ -6,3 +6,7 @@ Elasticsearch , Logstash, Kibana Scripts used for SharePoint ULS indexing.
 3. Kibana Configuration File.
 4. Kibana Charts and Dashboard JSON.
 
+
+# Full configuration scenario list on my blog
+
+https://trueinfosys.wordpress.com/2015/11/17/sharepoint-uls-log-analysis-using-elk-elasticsearch-logstash-and-kibana/
